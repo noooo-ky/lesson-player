@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>英語レッスン プレイヤー（管理付きテスト版＋Good Job）</title>
+  <style>
+    :root { --bg:#f3f4f6; --panel:#fff; --ink:#0f172a; --muted:#64748b; --accent:#f59e0b; --accent-ink:#b45309; }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",Meiryo,sans-serif;display:grid;place-items:center}
+    .app{width:min(1100px,92vw);height:min(680px,92vh);background:var(--panel);border-radius:18px;box-shadow:0 15px 30px rgba(0,0,0,.15);display:grid;grid-template-rows:auto 1fr auto;padding:20px 22px 16px}
+    .topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
+    .brand{font-weight:900;font-size:16px;letter-spacing:.08em;text-transform:uppercase}
+    .title{font-weight:800;font-size:22px;letter-spacing:.2px;text-align:center;justify-self:center}
+    .icons{display:flex;gap:10px;justify-self:end}
+    .icon-btn{border:1px solid #e5e7eb;background:#fff;width:34px;height:34px;display:grid;place-items:center;border-radius:10px;cursor:pointer}
+    .icon-btn:hover{background:#f8fafc}
+    .player-wrap{display:grid;place-items:center;padding:8px 0 0}
+    .video-shell{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;display:grid;place-items:center}
+    video{width:100%;height:100%;background:#000;outline:none}
+    .controls{display:flex;gap:22px;justify-content:center;align-items:center;padding:16px 0 4px}
+    .btn{display:grid;place-items:center;width:66px;height:46px;border:2px solid var(--accent);border-radius:12px;background:#fff;cursor:pointer;transition:transform .05s ease,box-shadow .15s ease;box-shadow:0 1px 0 rgba(0,0,0,.05)}
+    .btn:active{transform:translateY(1px);border-color:var(--accent-ink)} .btn[disabled]{opacity:.45;cursor:not-allowed} .btn svg{width:22px;height:22px}
+    .heart.fav path{fill:#ef4444} .hint{text-align:center;color:var(--muted);font-size:12px;padding-top:4px}
+    .float-heart{position:absolute;pointer-events:none;font-size:28px;animation:rise 900ms ease-out forwards;filter:drop-shadow(0 6px 14px rgba(0,0,0,.25))}
+    @keyframes rise{0%{transform:translateY(8px) scale(.9);opacity:0}30%{opacity:1}100%{transform:translateY(-60px) scale(1.2);opacity:0}}
+    @media(max-width:520px){.btn{width:56px;height:44px}.title{font-size:18px}}
+    /* manager */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#fff;width:min(780px,92vw);border-radius:14px;padding:16px 16px 12px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+    .manager-header{display:flex;justify-content:space-between;align-items:center}
+    .manager-header h2{margin:0;font-size:18px}
+    .mgr-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer}
+    .mgr-btn.primary{border-color:var(--accent)}
+    .list{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow:auto}
+    .item{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
+    .item input{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+    .rowbtns{display:flex;gap:6px}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="brand">CYBERDREAM</div>
+      <div class="title" id="title">Hello Song：うた</div>
+      <div class="icons">
+        <button class="icon-btn" id="homeBtn" title="ホーム（ダミー）" aria-label="ホーム">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>
+        </button>
+        <button class="icon-btn" id="settingsBtn" title="設定（コンテンツ管理）" aria-label="設定">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 2.2l.06.06c.47.47 1.14.61 1.82.33H9a1.65 1.65 0 0 0 1-1.51V1a2 2 0 1 1 4 0v.09c0 .66.39 1.25 1 1.51.68.28 1.35.14 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06c-.47.47-.61 1.14-.33 1.82.26.61.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="player-wrap">
+      <div class="video-shell">
+        <video id="video" preload="metadata" playsinline webkit-playsinline></video>
+      </div>
+    </div>
+
+    <div class="controls" aria-label="再生コントロール">
+      <button class="btn" id="prevBtn" title="前へ" aria-label="前へ">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM9.5 12l9.5 7V5z"/></svg>
+      </button>
+      <button class="btn" id="playPauseBtn" title="再生" aria-label="再生/一時停止">
+        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <button class="btn" id="nextBtn" title="次へ" aria-label="次へ">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 19h-2V5h2zM14.5 12L5 5v14z"/></svg>
+      </button>
+      <button class="btn" id="repeatBtn" title="リピート" aria-label="リピート">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 1l4 4-4 4V6H7a3 3 0 0 0-3 3v1H2V9a5 5 0 0 1 5-5h10V1zm-10 22l-4-4 4-4v3h10a3 3 0 0 0 3-3v-1h2v1a5 5 0 0 1-5 5H7v3z"/></svg>
+      </button>
+      <button class="btn" id="heartBtn" title="ハート（Good Job!）" aria-label="ハート">
+        <svg class="heart" viewBox="0 0 24 24"><path d="M12 21s-6.2-4.35-9.33-7.46A5.67 5.67 0 0 1 11.1 6.2L12 7.08l.9-.87a5.67 5.67 0 0 1 8.43 7.36C18.2 16.65 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+    </div>
+    <div class="hint">オート再生なし。ハート＝Good Job動画再生（終了後は元の位置に自動復帰）。進捗は自動保存。</div>
+  </div>
+
+  <div id="mgrWrap" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
+      <div class="manager-header">
+        <h2 id="mgrTitle">コンテンツ管理</h2>
+        <button class="mgr-btn" id="mgrClose">閉じる</button>
+      </div>
+      <div class="list" id="mgrList"></div>
+      <div class="s-actions" style="display:flex;justify-content:space-between;margin-top:10px">
+        <div><button class="mgr-btn" id="addItem">＋ 追加</button></div>
+        <div style="display:flex;gap:8px">
+          <button class="mgr-btn" id="exportBtn">エクスポート</button>
+          <label class="mgr-btn" for="importInput" style="display:inline-block;cursor:pointer">インポート<input type="file" id="importInput" accept="application/json" hidden></label>
+          <button class="mgr-btn primary" id="saveBtn">保存して反映</button>
+        </div>
+      </div>
+      <p class="hint" style="text-align:left;margin-top:8px">URLは mp4/mov 等の直接URL推奨。ローカルファイルは各行の「ファイル」から一時読み込み可（ページを閉じると消えます）。</p>
+    </div>
+  </div>
+
+  <script>
+    const GOODJOB_ID = 'goodjob';
+    const GOODJOB_DEFAULT = { id: GOODJOB_ID, title: 'Good Job!', src: 'goodjob.mp4' };
+
+    const DEFAULT_PLAYLIST = [
+      { id:'user1', title:'Hello Song：うた', src:'lesson1.mov' },
+      { id:'alphabet', title:'Alphabet Song', src:'https://www.w3schools.com/html/mov_bbb.mp4' },
+      { id:'numbers', title:'Numbers Chant', src:'https://www.w3schools.com/html/movie.mp4' },
+      GOODJOB_DEFAULT
+    ];
+    let PLAYLIST = DEFAULT_PLAYLIST.slice();
+    (function(){try{const raw=localStorage.getItem('lesson-playlist-v1');if(raw){const arr=JSON.parse(raw);if(Array.isArray(arr)&&arr.length){PLAYLIST=arr}}}catch(e){}})();
+    const STORE_KEY = 'lesson-player-v1';
+    const $ = (s)=>document.querySelector(s);
+    const video=$('#video'), titleEl=$('#title'), prevBtn=$('#prevBtn'), nextBtn=$('#nextBtn'), playPauseBtn=$('#playPauseBtn'), playIcon=$('#playIcon'), pauseIcon=$('#pauseIcon'), repeatBtn=$('#repeatBtn'), heartBtn=$('#heartBtn'), homeBtn=$('#homeBtn'), settingsBtn=$('#settingsBtn');
+    const state={index:0,time:0,favorites:new Set()};
+
+    function loadState(){try{const raw=localStorage.getItem(STORE_KEY);if(!raw)return;const s=JSON.parse(raw);if(typeof s.index==='number')state.index=Math.min(Math.max(s.index,0),PLAYLIST.length-1);if(typeof s.time==='number')state.time=Math.max(s.time,0);if(Array.isArray(s.favorites))state.favorites=new Set(s.favorites)}catch(e){}}
+    function saveState(){const p={index:state.index,time:Math.floor(video.currentTime||state.time||0),favorites:[...state.favorites]};try{localStorage.setItem(STORE_KEY,JSON.stringify(p))}catch(e){}}
+    function applySource(){const item=PLAYLIST[state.index]; if(!item){video.removeAttribute('src'); titleEl.textContent='（コンテンツなし）'; return;} titleEl.textContent=item.title; video.src=item.src; video.pause(); video.currentTime=Math.max(0,state.time||0); updateButtons(); updateHeartVisual(); saveState();}
+    function updateButtons(){prevBtn.disabled=(state.index===0); nextBtn.disabled=(state.index>=PLAYLIST.length-1); const playing=!video.paused&&!video.ended; playIcon.style.display=playing?'none':''; pauseIcon.style.display=playing?'':'';}
+    function updateHeartVisual(){const item=PLAYLIST[state.index]; const fav=state.favorites.has(item?.id); const heartSvg=heartBtn.querySelector('.heart'); heartSvg.classList.toggle('fav', !!fav); heartBtn.setAttribute('aria-pressed', fav?'true':'false');}
+
+    let audioCtx=null; function playChime(){try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator();const g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.type='sine';const t=audioCtx.currentTime;o.frequency.setValueAtTime(880,t);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.25,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);o.start(t);o.stop(t+0.36);}catch(e){}}
+    function floatHeart(x,y){const h=document.createElement('div');h.className='float-heart';h.textContent='💛';h.style.left=x+'px';h.style.top=y+'px';document.body.appendChild(h);setTimeout(()=>h.remove(),900)}
+
+    // Good Job flow
+    let playingGoodJob=false; let returnSnapshot=null;
+    function ensureGoodJobIndex(){ let idx=PLAYLIST.findIndex(it=>it.id===GOODJOB_ID); if(idx===-1){ PLAYLIST.push({...GOODJOB_DEFAULT}); try{localStorage.setItem('lesson-playlist-v1', JSON.stringify(PLAYLIST))}catch(e){} idx=PLAYLIST.length-1; } return idx; }
+
+    playPauseBtn.addEventListener('click',()=>{if(video.paused||video.ended){video.play()}else{video.pause()}updateButtons()});
+    prevBtn.addEventListener('click',()=>{playingGoodJob=false; if(state.index===0)return;state.index-=1;state.time=0;applySource()});
+    nextBtn.addEventListener('click',()=>{playingGoodJob=false; if(state.index>=PLAYLIST.length-1)return;state.index+=1;state.time=0;applySource()});
+    repeatBtn.addEventListener('click',()=>{video.currentTime=0;video.play();updateButtons()});
+    heartBtn.addEventListener('click',(e)=>{ playChime(); const r=e.currentTarget.getBoundingClientRect(); floatHeart(r.left+r.width/2,r.top); const gj=ensureGoodJobIndex(); returnSnapshot={index:state.index,time:Math.floor(video.currentTime||0)}; state.index=gj; state.time=0; applySource(); video.play(); updateButtons(); playingGoodJob=true; });
+    video.addEventListener('play',updateButtons); video.addEventListener('pause',()=>{updateButtons();saveState()});
+    video.addEventListener('ended',()=>{ updateButtons(); saveState(); const current=PLAYLIST[state.index]; if(playingGoodJob && current && current.id===GOODJOB_ID && returnSnapshot){ playingGoodJob=false; state.index=returnSnapshot.index; state.time=returnSnapshot.time; applySource(); returnSnapshot=null; } });
+    let lastSaved=0; video.addEventListener('timeupdate',()=>{const now=Math.floor(video.currentTime);if(now-lastSaved>=2){lastSaved=now;saveState()}});
+    window.addEventListener('keydown',(ev)=>{if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(ev.code==='Space'){ev.preventDefault();playPauseBtn.click()}if(ev.code==='ArrowRight')nextBtn.click();if(ev.code==='ArrowLeft')prevBtn.click();if(ev.code==='KeyR')repeatBtn.click();if(ev.code==='KeyF')heartBtn.click()});
+    homeBtn.addEventListener('click',()=>{saveState();alert('ホームに戻る（テスト版・ダミー）。\n進捗は保存されています。')});
+    settingsBtn.addEventListener('click',()=>{openManager()});
+    window.addEventListener('beforeunload',saveState);
+
+    function persistPlaylist(){ try{ localStorage.setItem('lesson-playlist-v1', JSON.stringify(PLAYLIST)); }catch(e){} }
+    function openManager(){
+      const wrap=document.getElementById('mgrWrap'), list=document.getElementById('mgrList'), close=document.getElementById('mgrClose'), add=document.getElementById('addItem'), save=document.getElementById('saveBtn'), exportBtn=document.getElementById('exportBtn'), importInput=document.getElementById('importInput');
+      let working=PLAYLIST.map(x=>({...x}));
+      const render=()=>{ list.innerHTML=''; working.forEach((it,idx)=>{ const row=document.createElement('div'); row.className='item'; row.innerHTML=`
+            <input aria-label="タイトル" placeholder="タイトル" value="${it.title??''}">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <input aria-label="URL" placeholder="https://... または blob:..." value="${it.src??''}">
+              <button class="mgr-btn file">ファイル</button>
+            </div>
+            <div class="rowbtns">
+              <button class="mgr-btn up">↑</button>
+              <button class="mgr-btn down">↓</button>
+              <button class="mgr-btn danger del">削除</button>
+            </div>`;
+          const [titleI,urlI]=row.querySelectorAll('input'); const fileBtn=row.querySelector('.file'); const up=row.querySelector('.up'); const down=row.querySelector('.down'); const del=row.querySelector('.del');
+          titleI.addEventListener('input',e=>working[idx].title=e.target.value);
+          urlI.addEventListener('input',e=>working[idx].src=e.target.value);
+          fileBtn.addEventListener('click',()=>{const fi=document.createElement('input');fi.type='file';fi.accept='video/*,audio/*';fi.onchange=()=>{const f=fi.files?.[0];if(!f)return;const url=URL.createObjectURL(f);working[idx].src=url;urlI.value=url;if(!working[idx].title){working[idx].title=f.name;titleI.value=f.name}};fi.click()});
+          up.addEventListener('click',()=>{if(idx===0)return;const t=working[idx-1];working[idx-1]=working[idx];working[idx]=t;render()});
+          down.addEventListener('click',()=>{if(idx>=working.length-1)return;const t=working[idx+1];working[idx+1]=working[idx];working[idx]=t;render()});
+          del.addEventListener('click',()=>{working.splice(idx,1);render()});
+          list.appendChild(row); }); };
+      render(); wrap.style.display='flex';
+      close.onclick=()=>{wrap.style.display='none'};
+      add.onclick=()=>{working.push({id:`c${Date.now()}`,title:'New Content',src:''});render()};
+      save.onclick=()=>{ working=working.filter(it=>(it.src||'').trim().length>0); working.forEach((it,i)=>{if(!it.id)it.id=`c${Date.now()}_${i}`}); PLAYLIST=working; persistPlaylist(); if(state.index>=PLAYLIST.length){state.index=Math.max(0,PLAYLIST.length-1);state.time=0} applySource(); wrap.style.display='none'; };
+      exportBtn.onclick=()=>{const blob=new Blob([JSON.stringify(working,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='playlist.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),500)};
+      importInput.onchange=()=>{const f=importInput.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const arr=JSON.parse(r.result);if(Array.isArray(arr)){working=arr;render()}}catch(e){alert('JSONの読み込みに失敗しました')}};r.readAsText(f)};
+    }
+
+    loadState(); applySource();
+  </script>
+</body>
+</html>
